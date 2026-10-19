@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Francisco Medical Clinic - Billing System</title>
+  <style>
+    :root {
+      --primary: #b91c1c;
+      --primary-dark: #991b1b;
+      --accent: #15803d;
+      --bg: #faf7f5;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+
+    #authOverlay {
+      position: fixed; inset: 0; z-index: 99; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 10% 20%, #fed7aa66 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, #fecdd366 0%, transparent 40%), #f8fafc;
+      padding: 20px; transition: 0.3s ease;
+    }
+    #authOverlay.logged-in { opacity: 0; visibility: hidden; pointer-events: none; }
+    .auth-card {
+      width: 100%; max-width: 410px; background: #fff; padding: 30px 26px; border-radius: 24px;
+      box-shadow: 0 20px 45px rgba(185, 28, 28, 0.08), 0 4px 15px rgba(0,0,0,0.03); text-align: center;
+    }
+    .auth-logo {
+      width: 70px; height: 70px; margin: 0 auto 12px; border-radius: 50%; border: 3px solid var(--primary);
+      display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--primary);
+      box-shadow: 0 4px 12px rgba(185,28,28,0.15);
+    }
+    .auth-title h2 { font-size: 19px; color: var(--text); font-weight: 800; }
+    .auth-title p { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+
+    .auth-tabs { display: flex; background: #f1f5f9; border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+    .auth-tab { flex: 1; padding: 7px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-radius: 8px; }
+    .auth-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+    
+    .role-pills { display: flex; gap: 8px; margin-bottom: 16px; }
+    .role-btn {
+      flex: 1; padding: 8px; border: 1.5px solid var(--border); border-radius: 10px; background: #fff;
+      font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; transition: 0.2s;
+    }
+    .role-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .input-group { margin-bottom: 12px; text-align: left; }
+    .input-group label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .input-group input {
+      width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; outline: none;
+    }
+    .input-group input:focus { border-color: var(--primary); }
+    .btn-submit {
+      width: 100%; padding: 11px; background: var(--primary); color: #fff; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 6px; transition: 0.2s;
+    }
+    .btn-submit:hover { background: var(--primary-dark); }
+
+
+    .navbar {
+      background: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand { font-size: 17px; font-weight: 800; color: var(--accent); }
+    .nav-user { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+    .btn-lock { padding: 6px 12px; border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
+
+    .main-grid { max-width: 1050px; margin: 22px auto; padding: 0 15px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+    .card { background: #fff; border-radius: 14px; padding: 18px; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+    .card h3 { font-size: 15px; font-weight: 800; color: var(--accent); margin-bottom: 12px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .form-row label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 3px; }
+    .form-row input, .form-row select { width: 100%; padding: 8px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; }
+
+
+    .category-group { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: #f8fafc; }
+    .category-group strong { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; }
+    .service-row { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 4px; font-size: 13px; cursor: pointer; }
+    .service-row:hover { background: #f0fdf4; border-color: var(--accent); }
+    .service-row label { cursor: pointer; display: flex; align-items: center; gap: 6px; flex: 1; font-weight: 500; }
+    .badge { background: #dcfce7; color: var(--accent); font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 4px; }
+
+
+    .receipt { border: 2px dashed var(--border); padding: 16px; border-radius: 10px; margin-bottom: 16px; }
+    .receipt-header { text-align: center; border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 10px; }
+    .receipt-line { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+    .receipt-items { border-top: 1px solid #f1f5f9; padding-top: 8px; margin-top: 8px; }
+    .total-line { border-top: 2px dashed var(--border); padding-top: 8px; margin-top: 8px; font-size: 17px; font-weight: 800; color: var(--accent); display: flex; justify-content: space-between; }
+    
+    pre { background: #0f172a; color: #1a8cbd; padding: 12px; border-radius: 8px; font-size: 11.5px; max-height: 180px; overflow-x: auto; font-family: monospace; }
+    .action-btns { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-act { flex: 1; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-green { background: var(--accent); color: #fff; }
+    .btn-outline { background: #fff; border: 1.5px solid var(--border); color: var(--muted); }
+
+    @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
+
+    
+    @media print {
+      body { background: #fff !important; padding: 20px 0 !important; }
+      #authOverlay, .navbar, .main-grid > div:first-child, .action-btns, .card:not(#printableCard) {
+        display: none !important;
+      }
+      .main-grid { display: block !important; margin: 0 auto !important; padding: 0 !important; max-width: 440px !important; }
+      #printableCard {
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        margin: 0 auto !important;
+      }
+      .receipt { border: 2px dashed #94a3b8 !important; }
+      .total-line { border-top: 2px dashed #94a3b8 !important; }
+    }
+  </style>
+</head>
+<body>
+
+
+  <div id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-logo">🏥</div>
+      <div class="auth-title">
+        <h2>Francisco Medical Clinic</h2>
+        <p>Pasig City • Medical Invoicing Portal</p>
+      </div>
+
+      <div class="auth-tabs">
+        <div class="auth-tab active" onclick="setAuthTab('in')">Sign In</div>
+        <div class="auth-tab" onclick="setAuthTab('up')">Sign Up / Register</div>
+      </div>
+
+      <div class="role-pills">
+        <button type="button" class="role-btn active" id="btnRoleAdmin" onclick="setRole('Admin')">🛡️ Admin</button>
+        <button type="button" class="role-btn" id="btnRoleDoctor" onclick="setRole('Doctor')">🩺 Doctor</button>
+      </div>
+
+      <form onsubmit="handleLogin(event)">
+        <div class="input-group">
+          <label>Username</label>
+          <input type="text" id="authUsername" value="admin_francisco" required>
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" id="authPassword" value="password123" required>
+        </div>
+        <button type="submit" class="btn-submit">Sign In →</button>
+      </form>
+    </div>
+  </div>
+
+  <nav class="navbar">
+    <div class="nav-brand">🏥 Francisco Medical Clinic</div>
+    <div class="nav-user">
+      <span>Active: <strong id="activeUserDisplay">Admin</strong></span>
+      <button class="btn-lock" onclick="toggleLock()">🔒 Lock / Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="main-grid">
+    <div class="card">
+      <h3>Patient & Accommodation</h3>
+      <div class="form-row">
+        <div>
+          <label>Patient Name</label>
+          <input type="text" id="patient" value="Juan Dela Cruz" oninput="computeBill()">
+        </div>
+        <div>
+          <label>Attending Doctor</label>
+          <input type="text" id="doctor" value="Dr. Santos" oninput="computeBill()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Room Type (₱/day)</label>
+          <select id="room" onchange="computeBill()">
+            <option value="0">None (Outpatient)</option>
+            <option value="800">Ward — ₱800/day</option>
+            <option value="1500">Semi-Private — ₱1,500/day</option>
+            <option value="2500">Private Room — ₱2,500/day</option>
+          </select>
+        </div>
+        <div>
+          <label>Number of Days</label>
+          <input type="number" id="days" value="1" min="1" oninput="computeBill()">
+        </div>
+      </div>
+
+      <h3 style="margin-top: 14px;">Clinical Services & Items</h3>
+      <div id="servicesContainer"></div>
+    </div>
+
+    <div>
+      <div class="card" id="printableCard">
+        <h3>🧾 Bill Summary</h3>
+        <div class="receipt">
+          <div class="receipt-header">
+            <strong>FRANCISCO MEDICAL CLINIC</strong>
+            <div style="font-size: 11px; color: var(--muted);">Official Patient Billing Statement</div>
+          </div>
+          <div class="receipt-line"><span>Patient:</span><strong id="rPatient">Juan Dela Cruz</strong></div>
+          <div class="receipt-line"><span>Doctor:</span><strong id="rDoctor">Dr. Santos</strong></div>
+          <div class="receipt-items" id="rItems"></div>
+          <div class="total-line">
+            <span>Total Bill:</span>
+            <span id="rTotal">₱950</span>
+          </div>
+        </div>
+
+        <div class="action-btns">
+          <button class="btn-act btn-outline" onclick="window.print()">🖨️ Print Receipt</button>
+          <button class="btn-act btn-green" onclick="copyJSON()">📋 Copy JSON</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 16px;">
+        <h3>📦 JSON Payload</h3>
+        <pre><code id="jsonBox"></code></pre>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const clinicServices = {
+      "Consultation Fee": [
+        { name: "Doctor Consultation (Dr. Santos)", price: 500, checked: true },
+        { name: "Follow-up Consultation", price: 300 }
+      ],
+      "Laboratory Tests": [
+        { name: "Routine Laboratory (Blood/Urine)", price: 300, checked: true },
+        { name: "Complete Blood Count (CBC)", price: 250 }
+      ],
+      "Medicines": [
+        { name: "Prescribed Medicine Pack", price: 150, checked: true },
+        { name: "Paracetamol 500mg (10s)", price: 80 }
+      ],
+      "Medical Procedures": [
+        { name: "Injection Administration", price: 100 },
+        { name: "Wound Cleaning / Dressing", price: 250 }
+      ],
+      "Medical Supplies": [
+        { name: "Syringe & Alcohol Swab", price: 50 },
+        { name: "Sterile Gauze & Gloves", price: 80 }
+      ],
+      "Certificate Fee": [
+        { name: "Medical Certificate", price: 200 },
+        { name: "Fit-to-Work Clearance", price: 300 }
+      ],
+      "Additional Doctor’s Fee": [
+        { name: "Specialist Referral Fee", price: 600 }
+      ],
+      "Other Services": [
+        { name: "Nebulization Session", price: 200 },
+        { name: "ECG Examination", price: 450 }
+      ]
+    };
+
+    let currentRole = "Admin";
+
+    function setRole(role) {
+      currentRole = role;
+      document.getElementById('btnRoleAdmin').classList.toggle('active', role === 'Admin');
+      document.getElementById('btnRoleDoctor').classList.toggle('active', role === 'Doctor');
+      document.getElementById('authUsername').value = (role === 'Doctor') ? 'dr_santos' : 'admin_francisco';
+    }
+
+    function setAuthTab(tab) {
+      const tabs = document.querySelectorAll('.auth-tab');
+      tabs[0].classList.toggle('active', tab === 'in');
+      tabs[1].classList.toggle('active', tab === 'up');
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      document.getElementById('activeUserDisplay').textContent = `${currentRole} (${document.getElementById('authUsername').value})`;
+      document.getElementById('authOverlay').classList.add('logged-in');
+      computeBill();
+    }
+
+    function toggleLock() {
+      document.getElementById('authOverlay').classList.remove('logged-in');
+    }
+
+    const container = document.getElementById("servicesContainer");
+    for (let cat in clinicServices) {
+      const box = document.createElement("div");
+      box.className = "category-group";
+      box.innerHTML = `<strong>${cat}</strong>` + clinicServices[cat].map(item => `
+        <div class="service-row">
+          <label><input type="checkbox" data-name="${item.name}" data-price="${item.price}" ${item.checked ? 'checked' : ''} onchange="computeBill()"> ${item.name}</label>
+          <span class="badge">₱${item.price}</span>
+        </div>
+      `).join('');
+      container.appendChild(box);
+    }
+
+    function computeBill() {
+      const patient = document.getElementById("patient").value || "Walk-in";
+      const doctor = document.getElementById("doctor").value || "Doctor on Duty";
+      const roomRate = Number(document.getElementById("room").value);
+      const days = Number(document.getElementById("days").value) || 1;
+
+      let items = [], total = 0;
+
+      if (roomRate > 0) {
+        const roomTotal = roomRate * days;
+        items.push({ name: `Room Accommodation (${days} day/s)`, price: roomTotal });
+        total += roomTotal;
+      }
+
+      document.querySelectorAll('#servicesContainer input[type="checkbox"]:checked').forEach(cb => {
+        const price = Number(cb.dataset.price);
+        items.push({ name: cb.dataset.name, price: price });
+        total += price;
+      });
+
+      document.getElementById("rPatient").textContent = patient;
+      document.getElementById("rDoctor").textContent = doctor;
+      document.getElementById("rItems").innerHTML = items.map(i => `
+        <div class="receipt-line"><span>${i.name}</span><strong>₱${i.price.toLocaleString()}</strong></div>
+      `).join('') || '<div style="font-size:12px; color:var(--muted); text-align:center;">No services selected</div>';
+      document.getElementById("rTotal").textContent = `₱${total.toLocaleString()}`;
+
+      const billJSON = {
+        clinic: "Francisco Medical Clinic",
+        auditedBy: currentRole,
+        patient: patient,
+        doctor: doctor,
+        items: items,
+        total: total
+      };
+
+      document.getElementById("jsonBox").textContent = JSON.stringify(billJSON, null, 2);
+    }
+
+    function copyJSON() {
+      navigator.clipboard.writeText(document.getElementById("jsonBox").textContent).then(() => alert("Copied JSON!"));
+    }
+
+    computeBill();
+  </script>
+</body>
+</html>
